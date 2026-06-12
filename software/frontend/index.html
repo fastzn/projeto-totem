@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface Frontend - Projeto Totem</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        /* Espaço reservado para o rosto animado (Canvas/SVG) */
+        #rosto-container {
+            width: 350px;
+            height: 350px;
+            background-color: #2a2a2a;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 4em;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(0, 123, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        .btn-ativar {
+            padding: 15px 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .btn-ativar:active {
+            transform: translateY(2px);
+        }
+        #status-conexao {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.9em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="rosto-container">O _ O</div>
+    
+    <button id="btn-audio" class="btn-ativar">Desbloquear Áudio</button>
+
+    <div id="status-conexao">A aguardar conexão com o Python...</div>
+
+    <script>
+        // ============================================================================
+        // COMUNICAÇÃO WEBSOCKET COM O BACKEND (PYTHON)
+        // ============================================================================
+        // Substituir 'localhost' pelo IP do computador onde o Python está a correr
+        const ws = new WebSocket('ws://localhost:8765');
+        const statusDiv = document.getElementById('status-conexao');
+        const rostoDiv = document.getElementById('rosto-container');
+        const btnAudio = document.getElementById('btn-audio');
+
+        ws.onopen = () => {
+            statusDiv.innerText = "🟢 Conectado ao Backend (Python)";
+            console.log("[WEBSOCKET] Ligação estabelecida.");
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const comando = JSON.parse(event.data);
+                console.log("[WEBSOCKET] Comando recebido:", comando);
+                
+                // Lógica simples de mudança de expressões faciais
+                if (comando.expressao) {
+                    mudarExpressao(comando.expressao);
+                }
+            } catch (e) {
+                console.error("[ERRO] Falha ao processar mensagem:", e);
+            }
+        };
+
+        ws.onclose = () => {
+            statusDiv.innerText = "🔴 Desconectado. A tentar reconectar...";
+            statusDiv.style.color = "#ff4444";
+        };
+
+        // ============================================================================
+        // LÓGICA DE INTERFACE E ÁUDIO
+        // ============================================================================
+        function mudarExpressao(estado) {
+            switch(estado) {
+                case 'feliz': rostoDiv.innerText = "^ _ ^"; break;
+                case 'falar': rostoDiv.innerText = "O o O"; break;
+                case 'piscar': rostoDiv.innerText = "- _ -"; setTimeout(() => rostoDiv.innerText = "O _ O", 200); break;
+                default: rostoDiv.innerText = "O _ O";
+            }
+        }
+
+        // Desbloqueio das políticas de autoplay do Android/Navegador
+        btnAudio.addEventListener('click', () => {
+            console.log("[ÁUDIO] Permissão concedida pelo utilizador.");
+            // Aqui entrará a inicialização de instâncias de áudio se usar TTS no frontend
+            btnAudio.style.display = 'none'; // Esconde o botão após clicar
+            rostoDiv.style.boxShadow = "0 0 40px rgba(0, 255, 100, 0.4)"; // Feedback visual
+        });
+    </script>
+</body>
+</html>
