@@ -1,0 +1,105 @@
+// ============================================================================
+// ARQUIVO: totem.ino
+// DESCRIÇÃO: Controle de servos e atuadores via comandos seriais
+// DEPENDÊNCIAS: Wire.h, Adafruit_PWMServoDriver.h
+// STATUS: MODIFICADO
+// AUTOR: Pedro Antônio Leal Fernandes
+// ============================================================================
+
+#include <Wire.h>
+#include <Adafruit_PWMServoDriver.h>
+
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40);
+
+const int CANAL_POLEGAR_FLEX = 0;
+const int CANAL_INDICADOR = 1;
+const int CANAL_MEDIO = 2;
+const int CANAL_MIN_ANEL = 3;
+const int CANAL_PUNHO = 5;
+
+// lembrando que o flexão do dedão tem que ser exatamente asim pois o servo é bugado, então
+// ele deve ir de 20 em 20 com o maximo de 70° de flexão. a rotação do punho é 30° deixa a
+// palma para cima. 180 deoxa para baixo, 100 deixa ela como se fosse em 90° tipo reta
+
+#define SERVOMIN 102
+#define SERVOMAX 600
+#define FREQ 50
+#define POLEGAR_FLEX_MAX 70
+#define POLEGAR_FLEX_PASSO 20
+#define PUNHO_MIN 30
+
+int anguloAtual[6] = {0, 0, 0, 0, 0, PUNHO_MIN};
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+  pwm.begin();
+  pwm.setPWMFreq(FREQ);
+  posicaoInicial();
+  Serial.println("OK");
+}
+
+void loop() {
+  if (Serial.available()) {
+    String cmd = Serial.readStringUntil('\n');
+    cmd.trim();
+    if (cmd.length() == 19 && cmd.startsWith("$")) {
+      int ang[6];
+      for (int i = 0; i < 6; i++) {
+        String sub = cmd.substring(1 + i * 3, 4 + i * 3);
+        ang[i] = sub.toInt();
+      }
+      
+      ang[0] = constrain(ang[0], 0, POLEGAR_FLEX_MAX);
+      for(int i = 1; i < 5; i++){
+          ang[i] = constrain(ang[i], 0, 180);
+      }
+      ang[5] = constrain(ang[5], PUNHO_MIN, 180);
+
+      if (ang[0] != anguloAtual[0]) {
+        moverPolegarFlex(ang[0]);
+      }
+      
+      moverDireto(CANAL_INDICADOR, ang[1]);
+      moverDireto(CANAL_MEDIO, ang[2]);
+      moverDireto(CANAL_MIN_ANEL, ang[3]);
+      moverDireto(CANAL_PUNHO, ang[5]);
+      
+      Serial.println("OK");
+    }
+  }
+}
+
+void posicaoInicial() {
+  int pulso = map(0, 0, 180, SERVOMIN, SERVOMAX);
+  pwm.setPWM(CANAL_POLEGAR_FLEX, 0, pulso);
+  anguloAtual[0] = 0;
+  moverDireto(CANAL_INDICADOR, 0);
+  moverDireto(CANAL_MEDIO, 0);
+  moverDireto(CANAL_MIN_ANEL, 0);
+  moverDireto(CANAL_PUNHO, PUNHO_MIN);
+}
+
+void moverDireto(int canal, int angulo) {
+  angulo = constrain(angulo, 0, 180);
+  int pulso = map(angulo, 0, 180, SERVOMIN, SERVOMAX);
+  pwm.setPWM(canal, 0, pulso);
+  anguloAtual[canal] = angulo;
+}
+
+void moverPolegarFlex(int destino) {
+  destino = constrain(destino, 0, POLEGAR_FLEX_MAX);
+  int atual = anguloAtual[0];
+  int passo = (destino > atual) ? POLEGAR_FLEX_PASSO : -POLEGAR_FLEX_PASSO;
+  
+  while (atual != destino) {
+    atual += passo;
+    if ((passo > 0 && atual > destino) || (passo < 0 && atual < destino)) {
+      atual = destino;
+    }
+    int pulso = map(atual, 0, 180, SERVOMIN, SERVOMAX);
+    pwm.setPWM(CANAL_POLEGAR_FLEX, 0, pulso);
+    delay(200);
+  }
+  anguloAtual[0] = destino;
+}
