@@ -1,0 +1,29 @@
+# Seguranca e Chaves de API (NUNCA subir para o GitHub)
+.env
+.env.local
+secret.py
+
+# Python / Backend
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+pip-log.txt
+
+# Arduino / Firmware
+build/
+*.elf
+*.hex
+*.bin
+
+# Arquivos temporarios de CAD/3D (Fusion 360 / AutoCAD deixam rastro)
+*.bak
+*.bck
+*.lck
+
+# Lixo do Sistema Operacional
+.DS_Store
+Thumbs.db
